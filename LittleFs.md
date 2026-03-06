@@ -15,6 +15,14 @@ Flash作为嵌入式场景的移植案例。
 系统和原本HAL/STD操作Flash的适配层功能。
 移植后方案 Main(应用) -> LittleFs Funs(系统) ->.read = lfs_flash_read(以read为例，实现在lfs_port.c中) -> HAL/STD Funs ->MCU Flash
 #### 2.2 具体适配实现
-适配工作以struct lfs_config 为核心展开：
+1. 适配工作以struct lfs_config 为核心展开：
 用HAL/STD Lib完成四个操作函数(read prog earse sync)，并用指针对四个操作函数进行指向；对硬件参数和性能参数进行配置；
 另外需要确认,1. 为LittleFs提供静态缓冲区; 2. 在函数操作里(适配层lfs_port.c); 3. 做地址保护,sync错误码返回的意义。
+
+2. STM32F407ZET6 Flash布局及文件系统管理位置
+  STM32F407ZET6的Flash布局不太规整，扇区0-3大小为16KB，扇区4大小为64KB，扇区5-7均为128KB；首先应该阅读.map文件，避免文件系统和代码段互相占用造成芯片损坏。其次注意编写适配层文件时，我们会编辑block_size = 扇区大小，因为STM32的硬件强制要求按扇区擦除，这里的值选择计划分配扇区空间大小即可。
+##### 此处应该注意，避免让文件系统管理大小不一致的扇区，必须只使用相同大小的扇区作为 LittleFS 的管理区域，如果混用(比如16KB和128KB)会造成逻辑与物理实际混乱，浪费空间，并且磨损均衡策略也会失效。。
+  根据 LittleFS 的规范，它将存储介质视为一个由大小均匀的块（evenly sized blocks）组成的数组，这些块是文件系统进行分配、垃圾回收和磨损均衡的逻辑单元，在 lfs_config 中配置的 block_size 参数，就是告诉 LittleFS 每一个“块”有多大。LittleFS 在运行时，会假设它所管理的每一个块（从块0到块 block_count-1）的大小都等于 block_size。
+
+
+
