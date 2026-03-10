@@ -21,9 +21,6 @@ ESP32 is a single 2.4 GHz Wi-Fi-and-Bluetooth SoC (System On a Chip) designed by
 
 ## 2. 硬件架构演进：从 Xtensa 到 RISC-
 
-
-
-
 ESP32 的架构演进反映了半导体行业的趋势：
 
 ### 2.1 双架构并存
@@ -130,9 +127,37 @@ NVS非易失性存储 (Non-Volatile Storage)实现的价值在于：
 
 **Q5：NVS的功能看起来和LittleFS的非常类似，二者有什么样的关系**
 <img width="841" height="555" alt="图片" src="https://github.com/user-attachments/assets/f311cd5d-1192-416b-ba0e-7d008835f70f" />
-
 NVS是乐鑫在ESP-IDF中提供的一个**轻量级键值对存储库**，专门用于存储小型的、频繁读写的配置参数。
+**NVS使用方式**：
+// NVS：直接读写小数据
+nvs_handle_t nvs_handle;
+nvs_open("storage", NVS_READWRITE, &nvs_handle);
 
+// 存储WiFi密码
+nvs_set_str(nvs_handle, "wifi_ssid", "MyHomeWiFi");
+nvs_set_str(nvs_handle, "wifi_pass", "12345678");
+nvs_set_u8(nvs_handle, "retry_count", 3);
+
+// 读取配置
+char ssid[32];
+size_t len = sizeof(ssid);
+nvs_get_str(nvs_handle, "wifi_ssid", ssid, &len);
+
+nvs_commit(nvs_handle);  // 确保写入完成
+nvs_close(nvs_handle);
+
+**LittleFS使用方式**：
+// LittleFS：像操作普通文件一样
+FILE* f = fopen("/www/index.html", "w");
+fprintf(f, "<html><body>Hello World</body></html>");
+fclose(f);
+
+// 读取文件
+f = fopen("/www/index.html", "r");
+fread(buffer, 1, 1024, f);
+fclose(f);
+
+ESP32同时提供两者，**NVS用于频繁读写的小参数（WiFi密码、设备状态），LittleFS用于访问的大文件（网页、证书）**。
 
 4. **双核调度：** 如果使用 S3，可以尝试将连接协议栈跑在 Core 0，将复杂的算法跑在 Core 1，实现真正的并行。
 5. **OTA 远程升级：** 乐鑫提供了非常成熟的 OTA 框架，支持回滚保护、固件防篡改，这是商业产品必用的功能。
